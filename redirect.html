@@ -1,16 +1,10 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<title>TikTok Redirect</title>
-</head>
+<html>
 <body>
 <h1>Redirección correcta desde TikTok</h1>
-<p>Tu código de autorización es:</p>
 <script>
-  const params = new URLSearchParams(window.location.search);
-  document.write("<h2>" + params.get("code") + "</h2>");
+  const p = new URLSearchParams(window.location.search);
+  document.write("<h2>" + p.get("code") + "</h2>");
 </script>
-<p>Este código es suficiente para aprobar tu app en TikTok Sandbox.</p>
 </body>
 </html>

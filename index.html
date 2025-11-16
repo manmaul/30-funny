@@ -1,14 +1,47 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WorldLOLmomentsBot</title>
+<meta charset="UTF-8">
+<title>WorldLOLmomentsBot</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #fafafa;
+  text-align: center;
+  padding-top: 80px;
+}
+button {
+  background-color: #000;
+  color: #fff;
+  padding: 14px 26px;
+  border: none;
+  border-radius: 6px;
+  font-size: 18px;
+  cursor: pointer;
+}
+button:hover {
+  background-color: #333;
+}
+a {
+  display: block;
+  margin-top: 30px;
+  color: #444;
+  text-decoration: none;
+}
+</style>
 </head>
 <body>
-  <h1>WorldLOLmomentsBot</h1>
-  <p>Página verificada para TikTok OAuth y subida de vídeo.</p>
-  <p><a href="privacy-policy.html">Privacy Policy</a></p>
-  <p><a href="terms-of-service.html">Terms of Service</a></p>
+
+<h1>WorldLOLmomentsBot</h1>
+<p>Inicia sesión con TikTok para continuar</p>
+
+<button onclick="location.href='https://www.tiktok.com/auth/authorize/?client_key=awmzk9nvoir6uvjz&response_type=code&scope=user.info.basic,video.upload&redirect_uri=https://manmaul.github.io/tiktok-verify/&state=xyz'">
+Login with TikTok
+</button>
+
+<a href="privacy-policy.html">Privacy Policy</a>
+<a href="terms-of-service.html">Terms of Service</a>
+
 </body>
 </html>

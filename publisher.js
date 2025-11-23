@@ -1,77 +1,52 @@
+// publisher.js
+import fs from 'fs/promises';
 import path from 'path';
 
-/**
- * Función para generar la descripción/créditos mínima requerida.
- * @param {Object} video Metadatos del video.
- * @returns {string} El texto de la descripción.
- */
-function generarDescripcion(video) {
-  // Crédito MÍNIMO en la descripción (obligatorio para transparencia)
-  const creditLine = `🎥 Créditos: ${video.autor_handle}.`;
-  
-  // URL para dirigir tráfico al original (opcional pero recomendado)
-  const urlLine = `\n\n🔗 Original aquí: ${video.url}`;
-  
-  // Hashtags (los originales del scraping + tus propios hashtags de curación)
-  const hashtags = "\n\n#reels #shorts #tiktokviral #humor"; 
-  
-  return `${video.titulo}\n\n${creditLine}${urlLine}${hashtags}`;
-}
+const INPUT_LIST_FILE = path.join(process.cwd(), 'data', 'curated_list.json');
+const OUTPUT_REPORT_FILE = path.join(process.cwd(), 'data', 'publication_report.json');
 
-const Publisher = {
+const VideoPublisher = {
+    // FUNCIÓN 'RUN'
+    async run(curatedVideos) {
+        if (curatedVideos.length === 0) {
+            console.log('No hay videos curados para publicar.');
+            return;
+        }
 
-  /**
-   * Simula la subida a una plataforma.
-   * La lógica REAL requiere SDKs de Google/Meta o librerías de terceros.
-   * @param {string} platform Nombre de la plataforma.
-   * @param {Object} video Metadatos del video curado.
-   */
-  async _uploadVideo(platform, video) {
-    const description = generarDescripcion(video);
-    
-    console.log(`\tPublicando en ${platform}...`);
-    console.log(`\tArchivo: ${path.basename(video.curated_path)}`);
-    console.log(`\tTítulo: ${video.titulo}`);
-    // console.log(`\tDescripción: ${description}`); // Descomentar para ver la descripción
-
-    // Aquí iría la lógica de la API real. Por ejemplo:
-    // if (platform === 'youtube') {
-    //   await youtube.videos.insert({ ... parámetros de subida y descripción });
-    // }
-    
-    // Simulación de una pausa para simular el tiempo de subida
-    await new Promise(resolve => setTimeout(resolve, 500)); 
-    
-    console.log(`\t✅ Publicado en ${platform}.`);
-  },
-
-  /**
-   * Orquesta la subida a las tres redes.
-   * @param {Array<Object>} videoList Lista de videos curados.
-   */
-  async run(videoList) {
-    if (!videoList || videoList.length === 0) {
-      console.log("No hay videos curados para publicar.");
-      return;
-    }
-
-    console.log(`\nComenzando la publicación de ${videoList.length} videos en las 3 plataformas...`);
-
-    for (const video of videoList) {
-        console.log(`\n--- Publicando video: ${video.titulo} ---`);
+        console.log(`Comenzando la simulación de publicación de ${curatedVideos.length} videos...`);
         
-        // Subida 1: YouTube Shorts (Usaremos la URL del TikTok/Reel como fuente)
-        await this._uploadVideo('YouTube Shorts', video);
+        const publicationReport = [];
 
-        // Subida 2: Instagram Reels
-        await this._uploadVideo('Instagram Reels', video);
-        
-        // Subida 3: TikTok
-        await this._uploadVideo('TikTok', video);
+        for (const video of curatedVideos) {
+            // Simulación: Elegir una plataforma de publicación basada en la plataforma original
+            const platform = video.plataforma === 'tiktok' ? 'TikTok' : 'Instagram Reels';
+            
+            // Simulación: Generar un ID de publicación y un estado
+            const publicationId = `pub-${Math.random().toString(36).substr(2, 9)}`;
+
+            // Simulación de la subida a la API
+            await new Promise(resolve => setTimeout(resolve, 50)); // Pequeña pausa para simular el tiempo de subida
+
+            const publishedData = {
+                ...video,
+                published_on: platform,
+                publication_id: publicationId,
+                status: 'PUBLICADO_SIMULADO',
+                timestamp: new Date().toISOString()
+            };
+            
+            publicationReport.push(publishedData);
+            console.log(`✅ SIMULADO: Publicado ${path.basename(video.curated_path)} en ${platform} (ID: ${publicationId})`);
+        }
+
+        // Guardar el reporte final
+        await fs.writeFile(OUTPUT_REPORT_FILE, JSON.stringify(publicationReport, null, 2));
+
+        console.log(`\n✅ Simulación de publicación de ${publicationReport.length} videos completada.`);
+        console.log(`Reporte guardado en ${OUTPUT_REPORT_FILE}`);
+
+        return publicationReport;
     }
-    
-    console.log(`\n✅ Publicación completada (Simulación).`);
-  }
 };
 
-export default Publisher;
+export default VideoPublisher;

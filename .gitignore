@@ -2,3 +2,5 @@ node_modules/
 credentials.json
 .env
 temp_videos/
+tmp/
+logs/

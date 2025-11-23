@@ -1,7 +1,4 @@
 import fs from 'fs/promises';
-import { spawn } from 'child_process';
-import path from 'path';
-
 // ... el resto del código del downloader.js sigue aquí ...
 import { spawn } from 'child_process';
 import path from 'path';

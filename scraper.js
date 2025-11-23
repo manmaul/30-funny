@@ -11,7 +11,7 @@ const REELS_COUNT = 5;
 const OUT_FILE = path.join(process.cwd(), 'data', 'video_list.json');
 
 // ID de un video de YouTube de muestra que SÍ está disponible (Nuevo ID)
-const SAMPLE_YOUTUBE_ID = 'vV-13_R6Q1k';
+const SAMPLE_YOUTUBE_ID = '_Q5O_o-E40Q';
 
 const VideoScraper = {
   // --- Simulación de Scraping ---

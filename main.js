@@ -1,32 +1,49 @@
+// main.js
 import VideoScraper from './scraper.js';
-import Downloader from './downloader.js';
-import Curator from './curator.js'; 
-import Publisher from './publisher.js'; // Importación para futuras fases
+import VideoDownloader from './downloader.js';
+import VideoCurator from './curator.js'; // <<-- NUEVA IMPORTACIÓN
+// import VideoPublisher from './publisher.js'; // <-- Lo implementaremos después
 
 async function main() {
-  try {
-    // 1. Fase de Scraping: Obtener URLs y Metadatos
-    console.log("--- FASE 1: OBTENCIÓN DE METADATOS ---");
-    let videoList = await VideoScraper.run();
+    console.log('--- FASE 1: OBTENCIÓN DE METADATOS ---');
+    let videoList = [];
+    try {
+        videoList = await VideoScraper.run();
+    } catch (e) {
+        console.error('💀 Error fatal en la FASE 1:', e.message);
+        return;
+    }
 
-    // 2. Fase de Descarga
-    console.log("\n--- FASE 2: DESCARGA DE ARCHIVOS ---");
-    videoList = await Downloader.run(videoList);
+    console.log('\n--- FASE 2: DESCARGA DE ARCHIVOS ---');
+    let downloadedVideos = [];
+    try {
+        downloadedVideos = await VideoDownloader.run(videoList);
+    } catch (e) {
+        console.error('💀 Error fatal en la FASE 2:', e.message);
+        return;
+    }
     
-    // 3. Fase de Curación (FFmpeg)
-    console.log("\n--- FASE 3: CURACIÓN CON WATERMARK ---");
-    videoList = await Curator.run(videoList); 
+    // --- NUEVA FASE 3 ---
+    console.log('\n--- FASE 3: CURACIÓN CON WATERMARK ---');
+    let curatedVideos = [];
+    try {
+        curatedVideos = await VideoCurator.run(downloadedVideos);
+    } catch (e) {
+        console.error('💀 Error fatal en la FASE 3:', e.message);
+        return;
+    }
 
-    // 4. Fase de Publicación (Actualmente simulada)
-    console.log("\n--- FASE 4: PUBLICACIÓN EN REDES ---");
-    await Publisher.run(videoList);
+    // --- FASE 4 (Pendiente de implementación) ---
+    console.log('\n--- FASE 4: PUBLICACIÓN EN REDES ---');
+    if (curatedVideos.length > 0) {
+        // await VideoPublisher.run(curatedVideos); // Descomentar al implementar publisher.js
+        console.log('Publicador no implementado, FASE 4 omitida.');
+    } else {
+        console.log('No hay videos curados para publicar.');
+    }
 
-    console.log("\n--- FLUJO COMPLETO FINALIZADO ---");
-    
-  } catch (error) {
-    console.error("\n💀 Error fatal en el flujo principal:", error.message);
-    process.exit(1);
-  }
+
+    console.log('\n--- FLUJO COMPLETO FINALIZADO ---');
 }
 
 main();

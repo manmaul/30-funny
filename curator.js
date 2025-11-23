@@ -1,86 +1,114 @@
-import ffmpeg from 'fluent-ffmpeg';
-import path from 'path';
+// curator.js
 import fs from 'fs/promises';
+import path from 'path';
+import { spawn } from 'child_process';
 
+const DOWNLOADS_DIR = path.join(process.cwd(), 'descargas');
 const CURATED_DIR = path.join(process.cwd(), 'curados');
+const INPUT_LIST_FILE = path.join(process.cwd(), 'data', 'downloaded_list.json');
+const OUTPUT_LIST_FILE = path.join(process.cwd(), 'data', 'curated_list.json');
+
+// --- CONFIGURACIÓN DEL WATERMARK ---
+// Nota: Necesitas crear una imagen PNG (con transparencia) para tu watermark.
+// Por ahora, usaremos el texto "ANDRE.AI" en el centro de la parte inferior.
+const WATERMARK_TEXT = 'ANDRE.AI';
+const WATERMARK_SIZE_PERCENT = 0.05; // 5% del ancho del video
 
 /**
- * Procesa un solo video con FFmpeg, añadiendo un watermark de crédito.
- * @param {Object} video El objeto de metadatos del video.
- * @returns {Promise<string>} La ruta al archivo curado.
+ * Ejecuta un comando de FFmpeg para añadir la marca de agua y recortar el video.
  */
-function transformarVideo(video) {
-  const inputPath = video.download_path;
-  const outputFilename = `curado-${path.basename(inputPath)}`;
-  const outputPath = path.join(CURATED_DIR, outputFilename);
-  
-  // 1. Texto de Crédito Mínimo
-  const credito = `Original: ${video.autor_handle}`;
-  
-  // 2. Filtros de FFmpeg para la Transformación
-  
-  // Añade una banda negra de 100px en la parte inferior (pad)
-  // luego superpone el texto de crédito (drawtext)
-  const filters = [
-    // Escala a 1080px de ancho y añade un relleno (pad) negro de 100px abajo
-    'scale=1080:-1,pad=1080:ih+100:0:0:black', 
-    // Dibuja el texto centrado en ese relleno
-    `drawtext=text='${credito}':fontcolor=white:fontsize=48:x=(w-text_w)/2:y=H-60` 
-  ].join(',');
-
+function runFFmpegCommand(inputPath, outputPath) {
   return new Promise((resolve, reject) => {
-    ffmpeg(inputPath)
-      .outputOptions([
-        `-vf ${filters}`, // Aplica los filtros de video
-        '-c:a copy', // Copia el audio sin recodificar (más rápido)
-        '-y' // Sobrescribe si el archivo ya existe
-      ])
-      .save(outputPath)
-      .on('end', () => {
-        console.log(`\t✅ Curado: ${outputPath}`);
-        resolve(outputPath);
-      })
-      .on('error', (err) => {
-        console.error(`\t❌ Error FFmpeg para ${video.autor_handle}: ${err.message}`);
-        reject(err);
-      });
+    
+    // Comando para añadir texto y recortar el video a 10 segundos
+    const args = [
+      '-i', inputPath, // Archivo de entrada
+      '-t', '00:00:10', // Duración máxima de 10 segundos
+      '-vf', 
+      // Añade el texto como marca de agua en la parte inferior central
+      `drawtext=text='${WATERMARK_TEXT}':fontcolor=white@0.8:fontsize=(w*${WATERMARK_SIZE_PERCENT}):x=(w-text_w)/2:y=h-(2*text_h)`, 
+      '-c:v', 'libx264', // Codec de video
+      '-crf', '23', // Calidad
+      '-preset', 'fast', // Velocidad de codificación
+      '-y', // Sobrescribir sin preguntar
+      outputPath // Archivo de salida
+    ];
+
+    console.log(`\nEjecutando FFmpeg en: ${path.basename(inputPath)}`);
+
+    const child = spawn('ffmpeg', args);
+    let errorOutput = '';
+
+    child.stderr.on('data', (data) => {
+      errorOutput += data.toString();
+    });
+
+    child.on('close', (code) => {
+      if (code === 0) {
+        console.log(`✅ Curado con éxito: ${path.basename(outputPath)}`);
+        resolve({ success: true, local_path: outputPath });
+      } else {
+        console.log(`❌ Error al curar ${path.basename(inputPath)}: Command failed with exit code ${code}\n${errorOutput}`);
+        resolve({ success: false, error: errorOutput });
+      }
+    });
+
+    child.on('error', (err) => {
+      // Error de ejecución del comando (ej: ffmpeg no se encontró)
+      reject(new Error(`Fallo al iniciar el proceso FFmpeg: ${err.message}`));
+    });
   });
 }
 
-const Curator = {
-  /**
-   * Ejecuta la transformación para todos los videos en la lista.
-   * @param {Array<Object>} videoList Lista de videos con la ruta de descarga.
-   * @returns {Array<Object>} Lista de videos con la ruta curada añadida.
-   */
-  async run(videoList) {
-    if (!videoList || videoList.length === 0) {
-      console.log("No hay videos descargados para curar.");
-      return [];
+const VideoCurator = {
+  // FUNCIÓN 'RUN'
+  async run() {
+    let videoList;
+    try {
+        const data = await fs.readFile(INPUT_LIST_FILE, 'utf-8');
+        videoList = JSON.parse(data);
+    } catch (e) {
+        console.log(`No se encontró la lista de videos descargados en ${INPUT_LIST_FILE}.`);
+        return [];
     }
     
-    // Asegurar la carpeta de salida
+    if (videoList.length === 0) {
+        console.log('No hay videos descargados para curar.');
+        return [];
+    }
+
+    console.log(`Comenzando la curación de ${videoList.length} videos...`);
+    
+    // Asegurar que la carpeta 'curados' existe
     await fs.mkdir(CURATED_DIR, { recursive: true });
 
-    console.log(`\nComenzando la curación de ${videoList.length} videos (FFmpeg)...`);
-    
-    const curatedVideos = [];
+    const curatedList = [];
 
     for (const video of videoList) {
-        try {
-            const curatedPath = await transformarVideo(video);
-            curatedVideos.push({
-                ...video,
-                curated_path: curatedPath // Añade la nueva ruta al objeto
-            });
-        } catch (error) {
-            // El video fallido se omite, pero el flujo principal continúa
+        if (video.local_path) {
+            const fileName = path.basename(video.local_path);
+            const outputPath = path.join(CURATED_DIR, `curado-${fileName}`);
+            
+            try {
+                const result = await runFFmpegCommand(video.local_path, outputPath);
+                
+                if (result.success) {
+                    video.curated_path = outputPath;
+                    curatedList.push(video);
+                }
+            } catch (e) {
+                console.error(`Error fatal en el proceso de curación para ${video.local_path}: ${e.message}`);
+            }
         }
     }
+    
+    // Guardar la lista de videos curados para la FASE 4
+    await fs.writeFile(OUTPUT_LIST_FILE, JSON.stringify(curatedList, null, 2));
 
-    console.log(`✅ Curación completada. ${curatedVideos.length} videos listos.`);
-    return curatedVideos;
+    console.log(`\n✅ ${curatedList.length} videos curados con éxito.`);
+
+    return curatedList;
   }
 };
 
-export default Curator;
+export default VideoCurator;

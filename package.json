@@ -1,38 +1,15 @@
-{
-  "name": "funny-scraper",
-  {
-  "name": "30-funny",
-  "type": "module",  <-- ¡Añade esta línea!
-  "version": "1.0.0",
-  "description": "Viral video curating project.",
-  "main": "main.js",
-  "scripts": {
-    "start": "node main.js"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "execa": "^8.0.1",
-    "fluent-ffmpeg": "^2.1.2"
-  }
+C:\Users\andre\Desktop\Doc Personal MGL\Proyecto IA\30-funny\30-funny-main>node main.js
+node:internal/modules/run_main:76
+  const type = getNearestParentPackageJSONType(mainPath);
+               ^
+
+Error: Invalid package config \\?\C:\Users\andre\Desktop\Doc Personal MGL\Proyecto IA\30-funny\30-funny-main\package.json.
+    at shouldUseESMLoader (node:internal/modules/run_main:76:16)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:147:20)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'ERR_INVALID_PACKAGE_CONFIG'
 }
-  "version": "1.0.0",
-  "type": "module",
-  "main": "index.js",
-  "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
-    "lint": "eslint ."
-  },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.19.2",
-    "node-fetch": "^3.3.2",
-    "googleapis": "^116.0.0"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.2",
-    "eslint": "^8.49.0"
-  }
-}
+
+Node.js v24.11.1
+
+C:\Users\andre\Desktop\Doc Personal MGL\Proyecto IA\30-funny\30-funny-main>

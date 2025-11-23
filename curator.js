@@ -11,26 +11,26 @@ const OUTPUT_LIST_FILE = path.join(process.cwd(), 'data', 'curated_list.json');
 // --- CONFIGURACIÓN DEL WATERMARK ---
 const WATERMARK_TEXT = 'ANDRE.AI';
 
-// RUTA ABSOLUTA DE LA FUENTE EN WINDOWS (Mantenemos esta ruta sin comillas)
+// RUTA ABSOLUTA DE LA FUENTE (La mantenemos, aunque no la usaremos temporalmente)
 const ARIA_FONT_PATH = 'C:/Windows/Fonts/arial.ttf'; 
 
 /**
- * Ejecuta un comando de FFmpeg para añadir la marca de agua y recortar el video.
+ * Ejecuta un comando de FFmpeg.
  */
 function runFFmpegCommand(inputPath, outputPath) {
   return new Promise((resolve, reject) => {
     
-    // Comando para añadir texto y recortar el video a 10 segundos
+    // Comando con filtro de prueba (Solo escala/recorte)
     const args = [
       '-i', inputPath, // Archivo de entrada
       '-t', '00:00:10', // Duración máxima de 10 segundos
       '-vf', 
-      // FILTRO CORREGIDO: Eliminamos las comillas simples alrededor de ${ARIA_FONT_PATH}
-      `drawtext=text='${WATERMARK_TEXT}':fontcolor=white@0.8:fontsize=30:x=(w-text_w)/2:y=h-(2*text_h):fontfile=${ARIA_FONT_PATH}`, 
+      // FILTRO DE PRUEBA: Escala a 1080x1920 (vertical) y centra.
+      'scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1:1', 
       '-c:v', 'libx264', // Codec de video
-      '-crf', '23', // Calidad
-      '-preset', 'fast', // Velocidad de codificación
-      '-y', // Sobrescribir sin preguntar
+      '-crf', '23', 
+      '-preset', 'fast', 
+      '-y', 
       outputPath // Archivo de salida
     ];
 
@@ -62,7 +62,6 @@ function runFFmpegCommand(inputPath, outputPath) {
 const VideoCurator = {
   // FUNCIÓN 'RUN'
   async run() {
-    // ... (El resto del código de la función run es el mismo) ...
     let videoList;
     try {
         const data = await fs.readFile(INPUT_LIST_FILE, 'utf-8');
@@ -109,4 +108,5 @@ const VideoCurator = {
   }
 };
 
+export default VideoCurator;
 export default VideoCurator;

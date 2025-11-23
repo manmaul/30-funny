@@ -1,5 +1,22 @@
 {
   "name": "funny-scraper",
+  {
+  "name": "30-funny",
+  "type": "module",  <-- ¡Añade esta línea!
+  "version": "1.0.0",
+  "description": "Viral video curating project.",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "execa": "^8.0.1",
+    "fluent-ffmpeg": "^2.1.2"
+  }
+}
   "version": "1.0.0",
   "type": "module",
   "main": "index.js",

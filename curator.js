@@ -11,8 +11,7 @@ const OUTPUT_LIST_FILE = path.join(process.cwd(), 'data', 'curated_list.json');
 // --- CONFIGURACIÓN DEL WATERMARK ---
 const WATERMARK_TEXT = 'ANDRE.AI';
 
-// RUTA ABSOLUTA DE LA FUENTE EN WINDOWS (DEBES VERIFICAR QUE ESTA RUTA ES CORRECTA)
-// Usamos barras normales (/) en la ruta de FFmpeg, lo cual es la mejor práctica.
+// RUTA ABSOLUTA DE LA FUENTE EN WINDOWS (Mantenemos esta ruta sin comillas)
 const ARIA_FONT_PATH = 'C:/Windows/Fonts/arial.ttf'; 
 
 /**
@@ -26,8 +25,8 @@ function runFFmpegCommand(inputPath, outputPath) {
       '-i', inputPath, // Archivo de entrada
       '-t', '00:00:10', // Duración máxima de 10 segundos
       '-vf', 
-      // FILTRO CORREGIDO: Usamos la ruta absoluta de la fuente para evitar el error Fontconfig
-      `drawtext=text='${WATERMARK_TEXT}':fontcolor=white@0.8:fontsize=30:x=(w-text_w)/2:y=h-(2*text_h):fontfile='${ARIA_FONT_PATH}'`, 
+      // FILTRO CORREGIDO: Eliminamos las comillas simples alrededor de ${ARIA_FONT_PATH}
+      `drawtext=text='${WATERMARK_TEXT}':fontcolor=white@0.8:fontsize=30:x=(w-text_w)/2:y=h-(2*text_h):fontfile=${ARIA_FONT_PATH}`, 
       '-c:v', 'libx264', // Codec de video
       '-crf', '23', // Calidad
       '-preset', 'fast', // Velocidad de codificación
@@ -55,7 +54,6 @@ function runFFmpegCommand(inputPath, outputPath) {
     });
 
     child.on('error', (err) => {
-      // Error de ejecución del comando (ej: ffmpeg no se encontró en el PATH)
       reject(new Error(`Fallo al iniciar el proceso FFmpeg: ${err.message}`));
     });
   });
@@ -64,6 +62,7 @@ function runFFmpegCommand(inputPath, outputPath) {
 const VideoCurator = {
   // FUNCIÓN 'RUN'
   async run() {
+    // ... (El resto del código de la función run es el mismo) ...
     let videoList;
     try {
         const data = await fs.readFile(INPUT_LIST_FILE, 'utf-8');
@@ -80,14 +79,12 @@ const VideoCurator = {
 
     console.log(`Comenzando la curación de ${videoList.length} videos...`);
     
-    // Asegurar que la carpeta 'curados' existe
     await fs.mkdir(CURATED_DIR, { recursive: true });
 
     const curatedList = [];
 
     for (const video of videoList) {
         if (video.local_path) {
-            // Renombrar el archivo de salida para la curación
             const fileName = path.basename(video.local_path).replace('.mp4', '-curado.mp4'); 
             const outputPath = path.join(CURATED_DIR, fileName);
             
@@ -104,7 +101,6 @@ const VideoCurator = {
         }
     }
     
-    // Guardar la lista de videos curados para la FASE 4
     await fs.writeFile(OUTPUT_LIST_FILE, JSON.stringify(curatedList, null, 2));
 
     console.log(`\n✅ ${curatedList.length} videos curados con éxito.`);

@@ -1,63 +1,94 @@
-import { execa } from 'execa'; // Necesitas instalar esta librería para ejecutar comandos de sistema
+import { spawn } from 'child_process';
 import path from 'path';
-import fs from 'fs/promises';
 
-const DOWNLOAD_DIR = path.join(process.cwd(), 'descargas');
+const DOWNLOADS_DIR = path.join(process.cwd(), 'descargas');
+const OUTPUT_FILE = path.join(process.cwd(), 'data', 'downloaded_list.json');
 
-const Downloader = {
-  /**
-   * Descarga una lista de videos usando yt-dlp.
-   * @param {Array<Object>} videoList Lista de metadatos de videos.
-   * @returns {Array<Object>} Lista de videos con la ruta local añadida.
-   */
+// Función para ejecutar el comando yt-dlp
+function runCommand(url, outputPath) {
+  return new Promise((resolve, reject) => {
+    const command = 'yt-dlp';
+    
+    // Argumentos corregidos para incluir la solución al warning de JavaScript Runtime
+    const args = [
+      '-o', outputPath,
+      '--restrict-filenames',
+      '-S', 'ext:mp4:m4a,height:1080',
+      '--extractor-args', 'youtube:player_client=default', // Solución al problema de JS
+      url
+    ];
+
+    console.log(`Ejecutando: ${command} ${args.join(' ')}`);
+
+    const child = spawn(command, args);
+
+    let errorOutput = '';
+
+    child.stderr.on('data', (data) => {
+      errorOutput += data.toString();
+    });
+
+    child.on('close', (code) => {
+      if (code === 0) {
+        // La descarga fue exitosa
+        console.log(`✅ Descargado con éxito: ${url}`);
+        // Nota: yt-dlp usa el template, no el nombre exacto, pero para el proceso es suficiente
+        resolve({ url, success: true, local_path: outputPath.replace('.%(ext)s', '.mp4') }); 
+      } else {
+        // La descarga falló
+        console.log(`❌ Error al descargar ${url}: ${errorOutput}`);
+        resolve({ url, success: false, error: errorOutput });
+      }
+    });
+    
+    child.on('error', (err) => {
+      // Error de ejecución del comando (ej: yt-dlp no se encontró)
+      reject(new Error(`Fallo al iniciar el proceso: ${err.message}`));
+    });
+  });
+}
+
+const VideoDownloader = {
+  // FUNCIÓN 'RUN'
   async run(videoList) {
-    if (!videoList || videoList.length === 0) {
-      console.log("No hay videos para descargar.");
-      return [];
-    }
-
-    // 1. Asegurar la carpeta de descargas
-    await fs.mkdir(DOWNLOAD_DIR, { recursive: true });
+    console.log(`Comenzando la descarga de ${videoList.length} videos...`);
+    
+    // Asegurar que la carpeta 'descargas' existe
+    await fs.promises.mkdir(DOWNLOADS_DIR, { recursive: true });
 
     const downloadedVideos = [];
-    
-    console.log(`Comenzando la descarga de ${videoList.length} videos...`);
+    const successList = [];
 
-    for (const [index, video] of videoList.entries()) {
-      const outputFilename = `${video.plataforma}-${index}.%(ext)s`;
-      const fullOutputPath = path.join(DOWNLOAD_DIR, outputFilename);
+    for (let i = 0; i < videoList.length; i++) {
+      const video = videoList[i];
+      const filenamePrefix = video.plataforma === 'tiktok' ? 'tiktok' : 'instagram';
       
-      console.log(`Descargando (${index + 1}/${videoList.length}): ${video.url}`);
+      // La ruta de salida usa el template '%(ext)s' para que yt-dlp escoja la extensión
+      const outputPath = path.join(DOWNLOADS_DIR, `${filenamePrefix}-${i}.%(ext)s`); 
+
+      console.log(`Descargando (${i + 1}/${videoList.length}): ${video.url}`);
 
       try {
-        // Ejecuta yt-dlp para descargar el video
-        // El formato de salida garantiza que obtengamos una extensión
-        const { stdout } = await execa('yt-dlp', [
-            '-o', fullOutputPath,
-            '--restrict-filenames', // Simplifica el nombre de archivo
-            '-S', 'ext:mp4:m4a,height:1080', // Prioriza formatos de alta calidad
-            video.url
-        ]);
+        const result = await runCommand(video.url, outputPath);
+        
+        // Si la descarga fue exitosa, agregamos la información al objeto de la lista original
+        if (result.success) {
+            video.local_path = result.local_path;
+            successList.push(video);
+        }
 
-        // Encuentra el nombre de archivo real creado por yt-dlp (es un poco complejo sin una API)
-        // Buscamos la línea de '[download] Destination: ...'
-        const destinationLine = stdout.split('\n').find(line => line.includes('[download] Destination:'));
-        const downloadedPath = destinationLine ? destinationLine.split(': ')[1] : fullOutputPath.replace('.%(ext)s', '.mp4');
-
-        // Añadir la ruta al objeto de metadatos
-        downloadedVideos.push({
-            ...video,
-            download_path: downloadedPath
-        });
-
-      } catch (error) {
-        console.error(`❌ Error al descargar ${video.url}: ${error.message}`);
+      } catch (e) {
+        console.error(`Error de ejecución fatal para ${video.url}: ${e.message}`);
       }
     }
+    
+    // Guardar la lista de videos descargados con éxito para la FASE 3
+    await fs.promises.writeFile(OUTPUT_FILE, JSON.stringify(successList, null, 2));
 
-    console.log(`✅ ${downloadedVideos.length} videos descargados con éxito.`);
-    return downloadedVideos;
+    console.log(`✅ ${successList.length} videos descargados con éxito.`);
+
+    return successList;
   }
 };
 
-export default Downloader;
+export default VideoDownloader;

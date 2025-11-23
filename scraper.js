@@ -1,69 +1,55 @@
 import fs from 'fs/promises';
 import path from 'path';
-import fetch from "node-fetch"; 
 
-// LISTA DE HASHTAGS
-const HASHTAGS = ["funny", "humor", "lol", "memes", "viral", "shorts", "funnyvideos", "lolvideos", "viralvideos", "graciosos"];
+const OUTPUT_FILE = path.join(process.cwd(), 'data', 'video_list.json');
 
+// --- CONSTANTES DE PRUEBA ---
+// Usamos un URL directo de un archivo MP4 estable (Big Buck Bunny) para evitar que YouTube lo bloquee.
+const STABLE_MP4_URL = 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 const TIKTOK_COUNT = 25;
-const REELS_COUNT = 5;
+const REEL_COUNT = 5;
 
-const OUT_FILE = path.join(process.cwd(), 'data', 'video_list.json');
+/**
+ * Genera una lista de videos de prueba.
+ */
+function generateSampleVideos(count, plataforma, isReel = false, offset = 0) {
+    const videos = [];
 
-// ID de un video de YouTube de muestra que SÍ está disponible (Nuevo ID)
-const SAMPLE_YOUTUBE_ID = '_Q5O_o-E40Q';
+    for (let i = 0; i < count; i++) {
+        videos.push({
+            id: `${plataforma}-${i + offset}`,
+            url: STABLE_MP4_URL, // Usamos el URL estable para todos los videos
+            plataforma: plataforma,
+            isReel: isReel,
+            channel: 'Stable Video Test',
+            description: `Video de prueba ${i + 1 + offset} para la plataforma ${plataforma}.`
+        });
+    }
+
+    return videos;
+}
+
 
 const VideoScraper = {
-  // --- Simulación de Scraping ---
-  async _scrapeTikTok() {
-    const videos = [];
-    for (let i = 1; i <= TIKTOK_COUNT; i++) {
-      videos.push({
-        plataforma: 'tiktok',
-        titulo: `TikTok Viral ${i}: La caida épica`,
-        // URL de YouTube funcional, usando un timestamp diferente para simular videos distintos
-        url: `https://www.youtube.com/watch?v=${SAMPLE_YOUTUBE_ID}&t=${i}`, 
-        autor_handle: `@creator_tiktok${i}`, 
-        vistas: Math.floor(Math.random() * 5000000)
-      });
+    // FUNCIÓN 'RUN'
+    async run() {
+        console.log('Buscando 25 TikToks y 5 Reels...');
+
+        // 1. Generar lista de TikToks (25 videos)
+        const tiktokVideos = generateSampleVideos(TIKTOK_COUNT, 'tiktok');
+
+        // 2. Generar lista de Reels (5 videos)
+        const reelVideos = generateSampleVideos(REEL_COUNT, 'instagram', true, TIKTOK_COUNT);
+
+        // 3. Combinar las listas
+        const videoList = [...tiktokVideos, ...reelVideos];
+
+        // 4. Guardar los metadatos
+        await fs.writeFile(OUTPUT_FILE, JSON.stringify(videoList, null, 2));
+
+        console.log(`✅ Metadatos de ${videoList.length} videos guardados en ${OUTPUT_FILE}`);
+        return videoList;
     }
-    return videos;
-  },
-
-  async _scrapeReels() {
-    const videos = [];
-    for (let i = 1; i <= REELS_COUNT; i++) {
-      videos.push({
-        plataforma: 'instagram',
-        titulo: `Reel de Humor ${i}: El gato con actitud`,
-        // URL de YouTube funcional, usando un timestamp diferente para simular videos distintos
-        url: `https://www.youtube.com/watch?v=${SAMPLE_YOUTUBE_ID}&t=${i + 100}`, 
-        autor_handle: `@creator_reel${i}`, 
-        vistas: Math.floor(Math.random() * 3000000)
-      });
-    }
-    return videos;
-  },
-  // --------------------------------
-
-  // FUNCIÓN 'RUN'
-  async run() {
-    console.log(`Buscando ${TIKTOK_COUNT} TikToks y ${REELS_COUNT} Reels...`);
-    
-    const tiktokVideos = await this._scrapeTikTok(); 
-    const reelsVideos = await this._scrapeReels(); 
-    
-    const allVideos = [...tiktokVideos, ...reelsVideos];
-
-    // Asegurar que la carpeta 'data' existe
-    await fs.mkdir(path.dirname(OUT_FILE), { recursive: true });
-    
-    // Guardar los metadatos en un archivo JSON para el siguiente paso
-    await fs.writeFile(OUT_FILE, JSON.stringify(allVideos, null, 2));
-    
-    console.log(`✅ Metadatos de ${allVideos.length} videos guardados en ${OUT_FILE}`);
-    return allVideos;
-  }
-}; 
+};
 
 export default VideoScraper;

@@ -10,6 +10,9 @@ const REELS_COUNT = 5;
 
 const OUT_FILE = path.join(process.cwd(), 'data', 'video_list.json');
 
+// ID de un video de YouTube de muestra que SÍ está disponible
+const SAMPLE_YOUTUBE_ID = 'iZk9s7xVbU0'; 
+
 const VideoScraper = {
   // --- Simulación de Scraping ---
   async _scrapeTikTok() {
@@ -18,8 +21,8 @@ const VideoScraper = {
       videos.push({
         plataforma: 'tiktok',
         titulo: `TikTok Viral ${i}: La caida épica`,
-        // URLs de YouTube simuladas para que yt-dlp pueda descargar algo real
-        url: `https://www.youtube.com/watch?v=kYJ32E50nQc&t=${i}`, 
+        // URL de YouTube funcional, usando un timestamp diferente para simular videos distintos
+        url: `https://www.youtube.com/watch?v=${SAMPLE_YOUTUBE_ID}&t=${i}`, 
         autor_handle: `@creator_tiktok${i}`, 
         vistas: Math.floor(Math.random() * 5000000)
       });
@@ -33,8 +36,8 @@ const VideoScraper = {
       videos.push({
         plataforma: 'instagram',
         titulo: `Reel de Humor ${i}: El gato con actitud`,
-        // URLs de YouTube simuladas para que yt-dlp pueda descargar algo real
-        url: `https://www.youtube.com/watch?v=kYJ32E50nQc&t=${i + 100}`, 
+        // URL de YouTube funcional, usando un timestamp diferente para simular videos distintos
+        url: `https://www.youtube.com/watch?v=${SAMPLE_YOUTUBE_ID}&t=${i + 100}`, 
         autor_handle: `@creator_reel${i}`, 
         vistas: Math.floor(Math.random() * 3000000)
       });
@@ -43,7 +46,7 @@ const VideoScraper = {
   },
   // --------------------------------
 
-  // FUNCIÓN 'RUN' - Definida correctamente dentro del objeto
+  // FUNCIÓN 'RUN'
   async run() {
     console.log(`Buscando ${TIKTOK_COUNT} TikToks y ${REELS_COUNT} Reels...`);
     
@@ -61,6 +64,6 @@ const VideoScraper = {
     console.log(`✅ Metadatos de ${allVideos.length} videos guardados en ${OUT_FILE}`);
     return allVideos;
   }
-}; // <--- ¡Esta llave de cierre es crítica!
+}; 
 
 export default VideoScraper;

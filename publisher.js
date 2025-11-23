@@ -2,48 +2,49 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-const INPUT_LIST_FILE = path.join(process.cwd(), 'data', 'curated_list.json');
-const OUTPUT_REPORT_FILE = path.join(process.cwd(), 'data', 'publication_report.json');
+const REPORT_DIR = path.join(process.cwd(), 'data');
+const REPORT_FILE = path.join(REPORT_DIR, 'publication_report.json');
+
+/**
+ * Simula la subida de un archivo a una plataforma y devuelve un ID único.
+ */
+function simulateUpload(filename, platform) {
+    // Generar un ID de publicación pseudo-aleatorio
+    const pubId = 'pub-' + Math.random().toString(36).substring(2, 11);
+    
+    // Simular un delay
+    const delay = Math.floor(Math.random() * 50) + 50; // 50ms a 100ms
+    return new Promise(resolve => {
+        setTimeout(() => {
+            console.log(`✅ SIMULADO: Publicado ${filename} en ${platform} (ID: ${pubId})`);
+            resolve({
+                filename: filename,
+                platform: platform,
+                publication_id: pubId,
+                timestamp: new Date().toISOString()
+            });
+        }, delay);
+    });
+}
 
 const VideoPublisher = {
-    // FUNCIÓN 'RUN'
     async run(curatedVideos) {
-        if (curatedVideos.length === 0) {
-            console.log('No hay videos curados para publicar.');
-            return;
-        }
-
         console.log(`Comenzando la simulación de publicación de ${curatedVideos.length} videos...`);
         
-        const publicationReport = [];
+        await fs.mkdir(REPORT_DIR, { recursive: true });
 
-        for (const video of curatedVideos) {
-            // Simulación: Elegir una plataforma de publicación basada en la plataforma original
-            const platform = video.plataforma === 'tiktok' ? 'TikTok' : 'Instagram Reels';
-            
-            // Simulación: Generar un ID de publicación y un estado
-            const publicationId = `pub-${Math.random().toString(36).substr(2, 9)}`;
+        const publicationPromises = curatedVideos.map(video => {
+            const filename = path.basename(video.curated_path);
+            return simulateUpload(filename, video.platform);
+        });
 
-            // Simulación de la subida a la API
-            await new Promise(resolve => setTimeout(resolve, 50)); // Pequeña pausa para simular el tiempo de subida
+        const publicationReport = await Promise.all(publicationPromises);
 
-            const publishedData = {
-                ...video,
-                published_on: platform,
-                publication_id: publicationId,
-                status: 'PUBLICADO_SIMULADO',
-                timestamp: new Date().toISOString()
-            };
-            
-            publicationReport.push(publishedData);
-            console.log(`✅ SIMULADO: Publicado ${path.basename(video.curated_path)} en ${platform} (ID: ${publicationId})`);
-        }
-
-        // Guardar el reporte final
-        await fs.writeFile(OUTPUT_REPORT_FILE, JSON.stringify(publicationReport, null, 2));
+        // Guardar el reporte completo
+        await fs.writeFile(REPORT_FILE, JSON.stringify(publicationReport, null, 2));
 
         console.log(`\n✅ Simulación de publicación de ${publicationReport.length} videos completada.`);
-        console.log(`Reporte guardado en ${OUTPUT_REPORT_FILE}`);
+        console.log(`Reporte guardado en ${REPORT_FILE}`);
 
         return publicationReport;
     }

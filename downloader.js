@@ -6,107 +6,52 @@ import { spawn } from 'child_process';
 const DOWNLOADS_DIR = path.join(process.cwd(), 'descargas');
 const OUTPUT_LIST_FILE = path.join(process.cwd(), 'data', 'downloaded_list.json');
 
-// Helper para ejecutar comandos de yt-dlp y capturar la salida
-function executeYtDlp(args) {
-    // CORRECCIÓN: Solucionado el error 'new new Promise'
-    return new Promise((resolve) => {
-        const child = spawn('yt-dlp', args);
-        let output = '';
-        let error = '';
-
-        child.stdout.on('data', (data) => {
-            output += data.toString();
-        });
-
-        child.stderr.on('data', (data) => {
-            error += data.toString();
-        });
-
-        child.on('close', (code) => {
-            if (code === 0) {
-                resolve({ success: true, output: output.trim(), error });
-            } else {
-                resolve({ success: false, output, error, code });
-            }
-        });
-        
-        child.on('error', (err) => {
-            resolve({ success: false, error: `Fallo al iniciar el proceso yt-dlp: ${err.message}`, code: 1 });
-        });
-    });
-}
-
 /**
- * Obtiene la duración del video usando --get-duration (salida de texto simple).
- * Esto es más estable que usar --dump-json.
+ * Ejecuta un comando de yt-dlp para descargar el video.
  */
-async function getVideoDuration(url) {
+function runYtDlpCommand(url, outputPath) {
+  return new Promise((resolve, reject) => {
+    
+    // Configuración para una descarga simple y estable.
     const args = [
-        '--get-duration', 
-        // Eliminado: '--extractor-args youtube:player_client=default' para mejor compatibilidad con URLs directas
-        url
+      '-o', outputPath,
+      '--restrict-filenames',
+      // Argumento para seleccionar el mejor stream y una altura máxima de 1080p
+      '-S', 'ext:mp4:m4a,height:1080',
+      // NO se incluyen filtros de duración ni argumentos de extractor específicos (youtube:player_client).
+      url
     ];
 
-    const result = await executeYtDlp(args);
+    console.log(`Ejecutando: yt-dlp ${args.join(' ')}`);
 
-    if (result.success && result.output) {
-        try {
-            // El output es típicamente HH:MM:SS o MM:SS
-            const outputTime = result.output.split('\n')[0].trim();
-            const timeParts = outputTime.split(':').map(Number);
-            let durationSeconds = 0;
-            
-            // Convertir la cadena de tiempo a segundos
-            if (timeParts.length === 3) { // HH:MM:SS
-                durationSeconds = timeParts[0] * 3600 + timeParts[1] * 60 + timeParts[2];
-            } else if (timeParts.length === 2) { // MM:SS
-                durationSeconds = timeParts[0] * 60 + timeParts[1];
-            } else if (timeParts.length === 1) { // SS
-                durationSeconds = timeParts[0];
-            }
-            
-            if (isNaN(durationSeconds) || durationSeconds <= 0) {
-                return Infinity;
-            }
-            return durationSeconds; 
-        } catch (e) {
-            return Infinity; 
-        }
-    } else {
-        return Infinity; 
-    }
-}
+    const child = spawn('yt-dlp', args);
+    let errorOutput = '';
+    let success = false;
 
-/**
- * Ejecuta la descarga real del video.
- */
-function runYtDlpDownload(url, outputPath) {
-    return new Promise(async (resolve) => {
-        
-        const args = [
-            '-o', outputPath,
-            '--restrict-filenames',
-            '-S', 'ext:mp4:m4a,height:1080',
-            // Eliminado el extractor-args problemático
-            url
-        ];
-
-        console.log(`  > Ejecutando descarga: yt-dlp ${args.join(' ')}`);
-
-        const result = await executeYtDlp(args);
-        
-        const alreadyDownloaded = result.error.includes('has already been downloaded');
-        
-        if (result.success || alreadyDownloaded) {
-            console.log(`✅ Descargado con éxito: ${url}`);
-            resolve({ success: true });
-        } else {
-            console.log(`❌ Error al descargar ${url}: Command failed with exit code ${result.code}\n${result.error}`);
-            resolve({ success: false, error: result.error });
-        }
+    child.stderr.on('data', (data) => {
+      const output = data.toString();
+      errorOutput += output;
+      // Detectar si la descarga fue exitosa o ya existía
+      if (output.includes('has already been downloaded')) {
+        success = true;
+      }
     });
-}
 
+    child.on('close', (code) => {
+      if (code === 0 || success) {
+        console.log(`✅ Descargado con éxito: ${url}`);
+        resolve({ success: true, local_path: outputPath });
+      } else {
+        console.log(`❌ Error al descargar ${url}: Command failed with exit code ${code}\n${errorOutput}`);
+        resolve({ success: false, error: errorOutput });
+      }
+    });
+
+    child.on('error', (err) => {
+      reject(new Error(`Fallo al iniciar el proceso yt-dlp: ${err.message}`));
+    });
+  });
+}
 
 const VideoDownloader = {
   // FUNCIÓN 'RUN'
@@ -116,56 +61,29 @@ const VideoDownloader = {
     await fs.mkdir(DOWNLOADS_DIR, { recursive: true });
     
     const downloadedList = [];
-    let videosToProcess = videoList;
 
-    if (videosToProcess.length === 0) {
-        try {
-            const data = await fs.readFile(path.join(process.cwd(), 'data', 'video_list.json'), 'utf-8');
-            videosToProcess = JSON.parse(data);
-        } catch (e) {
-            console.log("No se encontró una lista de videos para descargar.");
-            return [];
-        }
-    }
+    // Bucle sin filtro de duración
+    for (const video of videoList) {
+      const outputFilename = `${video.id}.%(ext)s`;
+      const outputPath = path.join(DOWNLOADS_DIR, outputFilename);
 
-    for (let i = 0; i < videosToProcess.length; i++) {
-        const video = videosToProcess[i];
-        const outputFilename = `${video.id}.%(ext)s`;
-        const outputPath = path.join(DOWNLOADS_DIR, outputFilename);
+      console.log(`Descargando (${downloadedList.length + 1}/${videoList.length}): ${video.url}`);
 
-        console.log(`\nProcesando (${i + 1}/${videosToProcess.length}): ${video.url}`);
+      try {
+        const result = await runYtDlpCommand(video.url, outputPath);
         
-        // --- 1. PRE-CHECK DE DURACIÓN ---
-        const duration = await getVideoDuration(video.url);
-        
-        if (duration === Infinity) {
-             console.log(`⚠️ Saltando ${video.id}. Falló la obtención de duración/metadatos.`);
-             continue;
+        if (result.success) {
+          video.local_path = outputPath.replace('.%(ext)s', '.mp4'); 
+          downloadedList.push(video);
         }
-        
-        if (duration > 59) {
-            console.log(`⚠️ Saltando ${video.id}. Duración (${duration}s) supera el límite de 59s.`);
-            continue; 
-        }
-        
-        console.log(`Duración OK (${duration}s). Procediendo a la descarga...`);
-
-        // --- 2. DESCARGA REAL ---
-        try {
-            const result = await runYtDlpDownload(video.url, outputPath);
-            
-            if (result.success) {
-                video.local_path = outputPath.replace('.%(ext)s', '.mp4'); 
-                downloadedList.push(video);
-            }
-        } catch (e) {
-            console.error(`Error fatal en el proceso de descarga para ${video.url}: ${e.message}`);
-        }
+      } catch (e) {
+        console.error(`Error fatal en el proceso de descarga para ${video.url}: ${e.message}`);
+      }
     }
     
     await fs.writeFile(OUTPUT_LIST_FILE, JSON.stringify(downloadedList, null, 2));
 
-    console.log(`\n✅ ${downloadedList.length} videos descargados y validados con éxito.`);
+    console.log(`\n✅ ${downloadedList.length} videos descargados con éxito.`);
 
     return downloadedList;
   }

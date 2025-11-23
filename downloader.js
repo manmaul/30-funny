@@ -8,7 +8,8 @@ const OUTPUT_LIST_FILE = path.join(process.cwd(), 'data', 'downloaded_list.json'
 
 // Helper para ejecutar comandos de yt-dlp y capturar la salida
 function executeYtDlp(args) {
-    return new new Promise((resolve) => {
+    // AQUI ESTABA EL ERROR: return new new Promise...
+    return new Promise((resolve) => { // <-- CORREGIDO: solo un 'new'
         const child = spawn('yt-dlp', args);
         let output = '';
         let error = '';

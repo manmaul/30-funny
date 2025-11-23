@@ -1,6 +1,7 @@
-// ... importaciones existentes
+import VideoScraper from './scraper.js';
+import Downloader from './downloader.js';
 import Curator from './curator.js'; 
-import Publisher from './publisher.js'; // <-- NUEVO: Módulo de Publicación
+import Publisher from './publisher.js'; // Importación para futuras fases
 
 async function main() {
   try {
@@ -16,7 +17,7 @@ async function main() {
     console.log("\n--- FASE 3: CURACIÓN CON WATERMARK ---");
     videoList = await Curator.run(videoList); 
 
-    // 4. Fase de Publicación <-- NUEVO: Ejecutar el publicador
+    // 4. Fase de Publicación (Actualmente simulada)
     console.log("\n--- FASE 4: PUBLICACIÓN EN REDES ---");
     await Publisher.run(videoList);
 
@@ -27,7 +28,5 @@ async function main() {
     process.exit(1);
   }
 }
-
-main();
 
 main();

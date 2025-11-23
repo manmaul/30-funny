@@ -17,9 +17,7 @@ function runYtDlpCommand(url, outputPath, videoId) {
       '--restrict-filenames',
       // Argumento para seleccionar el mejor stream (mp4 o m4a) y una altura máxima de 1080p
       '-S', 'ext:mp4:m4a,height:1080',
-      // ARGUMENTO REINTRODUCIDO: Limita la descarga a 59 segundos
-      '--max-duration', '59', 
-      // Este argumento asegura que yt-dlp funcione con la URL estable de Big Buck Bunny
+      // ELIMINADO: Ya no incluimos --max-duration 59
       '--extractor-args', 'youtube:player_client=default', 
       url
     ];

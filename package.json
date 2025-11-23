@@ -1,15 +1,22 @@
-C:\Users\andre\Desktop\Doc Personal MGL\Proyecto IA\30-funny\30-funny-main>node main.js
-node:internal/modules/run_main:76
-  const type = getNearestParentPackageJSONType(mainPath);
-               ^
-
-Error: Invalid package config \\?\C:\Users\andre\Desktop\Doc Personal MGL\Proyecto IA\30-funny\30-funny-main\package.json.
-    at shouldUseESMLoader (node:internal/modules/run_main:76:16)
-    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:147:20)
-    at node:internal/main/run_main_module:33:47 {
-  code: 'ERR_INVALID_PACKAGE_CONFIG'
+{
+  "name": "30-funny",
+  "version": "1.0.0",
+  "description": "Viral video curating project.",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "keywords": [
+    "tiktok",
+    "scraper",
+    "ffmpeg",
+    "automation"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "execa": "^8.0.1",
+    "fluent-ffmpeg": "^2.1.2"
+  }
 }
-
-Node.js v24.11.1
-
-C:\Users\andre\Desktop\Doc Personal MGL\Proyecto IA\30-funny\30-funny-main>

@@ -1,6 +1,6 @@
 import fetch from "node-fetch";
 
-const HASHTAGS = ["funny", "humor", "lol", "memes", "viral", "shorts"];
+const HASHTAGS = ["funny", "humor", "lol", "memes", "viral", "shorts", "funnyvideos". "lolvideos", "viralvideos", "graciosos"];
 
 const TikTokScraper = {
   /** ---------------------------------------------

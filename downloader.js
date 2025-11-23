@@ -1,5 +1,4 @@
-import fs from 'fs/promises';
-// ... el resto del código del downloader.js sigue aquí ...
+import fs from 'fs/promises'; 
 import { spawn } from 'child_process';
 import path from 'path';
 
@@ -34,11 +33,10 @@ function runCommand(url, outputPath) {
       if (code === 0) {
         // La descarga fue exitosa
         console.log(`✅ Descargado con éxito: ${url}`);
-        // Nota: yt-dlp usa el template, no el nombre exacto, pero para el proceso es suficiente
         resolve({ url, success: true, local_path: outputPath.replace('.%(ext)s', '.mp4') }); 
       } else {
         // La descarga falló
-        console.log(`❌ Error al descargar ${url}: ${errorOutput}`);
+        console.log(`❌ Error al descargar ${url}: Command failed with exit code ${code}\n${errorOutput}`);
         resolve({ url, success: false, error: errorOutput });
       }
     });
@@ -56,7 +54,7 @@ const VideoDownloader = {
     console.log(`Comenzando la descarga de ${videoList.length} videos...`);
     
     // Asegurar que la carpeta 'descargas' existe
-    await fs.promises.mkdir(DOWNLOADS_DIR, { recursive: true });
+    await fs.mkdir(DOWNLOADS_DIR, { recursive: true });
 
     const downloadedVideos = [];
     const successList = [];
@@ -65,7 +63,6 @@ const VideoDownloader = {
       const video = videoList[i];
       const filenamePrefix = video.plataforma === 'tiktok' ? 'tiktok' : 'instagram';
       
-      // La ruta de salida usa el template '%(ext)s' para que yt-dlp escoja la extensión
       const outputPath = path.join(DOWNLOADS_DIR, `${filenamePrefix}-${i}.%(ext)s`); 
 
       console.log(`Descargando (${i + 1}/${videoList.length}): ${video.url}`);
@@ -73,9 +70,9 @@ const VideoDownloader = {
       try {
         const result = await runCommand(video.url, outputPath);
         
-        // Si la descarga fue exitosa, agregamos la información al objeto de la lista original
         if (result.success) {
-            video.local_path = result.local_path;
+            // Nota: Aquí estamos asumiendo que yt-dlp descarga un .mp4
+            video.local_path = path.join(DOWNLOADS_DIR, `${filenamePrefix}-${i}.mp4`); 
             successList.push(video);
         }
 
@@ -85,7 +82,7 @@ const VideoDownloader = {
     }
     
     // Guardar la lista de videos descargados con éxito para la FASE 3
-    await fs.promises.writeFile(OUTPUT_FILE, JSON.stringify(successList, null, 2));
+    await fs.writeFile(OUTPUT_FILE, JSON.stringify(successList, null, 2));
 
     console.log(`✅ ${successList.length} videos descargados con éxito.`);
 

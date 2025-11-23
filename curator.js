@@ -9,10 +9,7 @@ const INPUT_LIST_FILE = path.join(process.cwd(), 'data', 'downloaded_list.json')
 const OUTPUT_LIST_FILE = path.join(process.cwd(), 'data', 'curated_list.json');
 
 // --- CONFIGURACIÓN DEL WATERMARK ---
-// Nota: Necesitas crear una imagen PNG (con transparencia) para tu watermark.
-// Por ahora, usaremos el texto "ANDRE.AI" en el centro de la parte inferior.
 const WATERMARK_TEXT = 'ANDRE.AI';
-const WATERMARK_SIZE_PERCENT = 0.05; // 5% del ancho del video
 
 /**
  * Ejecuta un comando de FFmpeg para añadir la marca de agua y recortar el video.
@@ -25,8 +22,8 @@ function runFFmpegCommand(inputPath, outputPath) {
       '-i', inputPath, // Archivo de entrada
       '-t', '00:00:10', // Duración máxima de 10 segundos
       '-vf', 
-      // Añade el texto como marca de agua en la parte inferior central
-      `drawtext=text='${WATERMARK_TEXT}':fontcolor=white@0.8:fontsize=(w*${WATERMARK_SIZE_PERCENT}):x=(w-text_w)/2:y=h-(2*text_h)`, 
+      // FILTRO CORREGIDO: Usamos 'fontfile=arial.ttf' y 'fontsize=30' para evitar el error Fontconfig
+      `drawtext=text='${WATERMARK_TEXT}':fontcolor=white@0.8:fontsize=30:x=(w-text_w)/2:y=h-(2*text_h):fontfile=arial.ttf`, 
       '-c:v', 'libx264', // Codec de video
       '-crf', '23', // Calidad
       '-preset', 'fast', // Velocidad de codificación
@@ -40,6 +37,7 @@ function runFFmpegCommand(inputPath, outputPath) {
     let errorOutput = '';
 
     child.stderr.on('data', (data) => {
+      // Capturamos la salida de error (donde FFmpeg reporta el progreso/fallos)
       errorOutput += data.toString();
     });
 
@@ -48,13 +46,14 @@ function runFFmpegCommand(inputPath, outputPath) {
         console.log(`✅ Curado con éxito: ${path.basename(outputPath)}`);
         resolve({ success: true, local_path: outputPath });
       } else {
-        console.log(`❌ Error al curar ${path.basename(inputPath)}: Command failed with exit code ${code}\n${errorOutput}`);
-        resolve({ success: false, error: errorOutput });
+        console.log(`❌ Error al curar ${path.basename(inputPath)}: Command failed with exit code ${code}`);
+        // No mostramos errorOutput aquí, ya que a menudo es solo el log detallado de FFmpeg
+        resolve({ success: false, error: `FFmpeg exit code: ${code}` });
       }
     });
 
     child.on('error', (err) => {
-      // Error de ejecución del comando (ej: ffmpeg no se encontró)
+      // Error de ejecución del comando (ej: ffmpeg no se encontró en el PATH)
       reject(new Error(`Fallo al iniciar el proceso FFmpeg: ${err.message}`));
     });
   });
@@ -86,8 +85,9 @@ const VideoCurator = {
 
     for (const video of videoList) {
         if (video.local_path) {
-            const fileName = path.basename(video.local_path);
-            const outputPath = path.join(CURATED_DIR, `curado-${fileName}`);
+            // Nota: Cambiamos el .mp4 a .mp4 para la salida
+            const fileName = path.basename(video.local_path).replace('.mp4', '-curado.mp4'); 
+            const outputPath = path.join(CURATED_DIR, fileName);
             
             try {
                 const result = await runFFmpegCommand(video.local_path, outputPath);

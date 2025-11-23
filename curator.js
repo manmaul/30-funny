@@ -11,6 +11,10 @@ const OUTPUT_LIST_FILE = path.join(process.cwd(), 'data', 'curated_list.json');
 // --- CONFIGURACIÓN DEL WATERMARK ---
 const WATERMARK_TEXT = 'ANDRE.AI';
 
+// RUTA ABSOLUTA DE LA FUENTE EN WINDOWS (DEBES VERIFICAR QUE ESTA RUTA ES CORRECTA)
+// Usamos barras normales (/) en la ruta de FFmpeg, lo cual es la mejor práctica.
+const ARIA_FONT_PATH = 'C:/Windows/Fonts/arial.ttf'; 
+
 /**
  * Ejecuta un comando de FFmpeg para añadir la marca de agua y recortar el video.
  */
@@ -22,8 +26,8 @@ function runFFmpegCommand(inputPath, outputPath) {
       '-i', inputPath, // Archivo de entrada
       '-t', '00:00:10', // Duración máxima de 10 segundos
       '-vf', 
-      // FILTRO CORREGIDO: Usamos 'fontfile=arial.ttf' y 'fontsize=30' para evitar el error Fontconfig
-      `drawtext=text='${WATERMARK_TEXT}':fontcolor=white@0.8:fontsize=30:x=(w-text_w)/2:y=h-(2*text_h):fontfile=arial.ttf`, 
+      // FILTRO CORREGIDO: Usamos la ruta absoluta de la fuente para evitar el error Fontconfig
+      `drawtext=text='${WATERMARK_TEXT}':fontcolor=white@0.8:fontsize=30:x=(w-text_w)/2:y=h-(2*text_h):fontfile='${ARIA_FONT_PATH}'`, 
       '-c:v', 'libx264', // Codec de video
       '-crf', '23', // Calidad
       '-preset', 'fast', // Velocidad de codificación
@@ -37,7 +41,6 @@ function runFFmpegCommand(inputPath, outputPath) {
     let errorOutput = '';
 
     child.stderr.on('data', (data) => {
-      // Capturamos la salida de error (donde FFmpeg reporta el progreso/fallos)
       errorOutput += data.toString();
     });
 
@@ -47,7 +50,6 @@ function runFFmpegCommand(inputPath, outputPath) {
         resolve({ success: true, local_path: outputPath });
       } else {
         console.log(`❌ Error al curar ${path.basename(inputPath)}: Command failed with exit code ${code}`);
-        // No mostramos errorOutput aquí, ya que a menudo es solo el log detallado de FFmpeg
         resolve({ success: false, error: `FFmpeg exit code: ${code}` });
       }
     });
@@ -85,7 +87,7 @@ const VideoCurator = {
 
     for (const video of videoList) {
         if (video.local_path) {
-            // Nota: Cambiamos el .mp4 a .mp4 para la salida
+            // Renombrar el archivo de salida para la curación
             const fileName = path.basename(video.local_path).replace('.mp4', '-curado.mp4'); 
             const outputPath = path.join(CURATED_DIR, fileName);
             

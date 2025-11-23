@@ -8,7 +8,7 @@ const OUTPUT_LIST_FILE = path.join(process.cwd(), 'data', 'downloaded_list.json'
 
 // Helper para ejecutar comandos de yt-dlp y capturar la salida
 function executeYtDlp(args) {
-    return new Promise((resolve) => {
+    return new new Promise((resolve) => {
         const child = spawn('yt-dlp', args);
         let output = '';
         let error = '';
@@ -23,7 +23,7 @@ function executeYtDlp(args) {
 
         child.on('close', (code) => {
             if (code === 0) {
-                resolve({ success: true, output, error });
+                resolve({ success: true, output: output.trim(), error });
             } else {
                 resolve({ success: false, output, error, code });
             }
@@ -36,12 +36,11 @@ function executeYtDlp(args) {
 }
 
 /**
- * Obtiene la duración del video usando la salida JSON de yt-dlp.
+ * Obtiene la duración del video usando --get-duration (salida de texto simple).
  */
 async function getVideoDuration(url) {
     const args = [
-        '--dump-json',
-        '--flat-playlist', // Modo más rápido para obtener solo metadatos
+        '--get-duration', 
         '--extractor-args', 'youtube:player_client=default', 
         url
     ];
@@ -50,17 +49,30 @@ async function getVideoDuration(url) {
 
     if (result.success && result.output) {
         try {
-            // yt-dlp a veces devuelve múltiples JSONs, tomamos el primero
-            const jsonText = result.output.trim().split('\n')[0]; 
-            const data = JSON.parse(jsonText);
-            return data.duration || Infinity; // Devolvemos duración o Infinito si no se encuentra
+            // El output es típicamente HH:MM:SS o MM:SS
+            const outputTime = result.output.split('\n')[0].trim();
+            const timeParts = outputTime.split(':').map(Number);
+            let durationSeconds = 0;
+            
+            // Convertir la cadena de tiempo a segundos
+            if (timeParts.length === 3) { // HH:MM:SS
+                durationSeconds = timeParts[0] * 3600 + timeParts[1] * 60 + timeParts[2];
+            } else if (timeParts.length === 2) { // MM:SS
+                durationSeconds = timeParts[0] * 60 + timeParts[1];
+            } else if (timeParts.length === 1) { // SS
+                durationSeconds = timeParts[0];
+            }
+            
+            if (isNaN(durationSeconds) || durationSeconds <= 0) {
+                return Infinity;
+            }
+            return durationSeconds; 
         } catch (e) {
-            console.error(`Error al parsear JSON de duración para ${url}: ${e.message}`);
+            console.error(`Error al procesar la duración para ${url}: ${e.message}`);
             return Infinity; 
         }
     } else {
-        console.error(`Error al obtener metadatos para ${url}.`);
-        return Infinity; // Saltar si falla la obtención de metadatos
+        return Infinity; 
     }
 }
 
@@ -82,7 +94,6 @@ function runYtDlpDownload(url, outputPath) {
 
         const result = await executeYtDlp(args);
         
-        // Manejar condición de éxito "ya descargado"
         const alreadyDownloaded = result.error.includes('has already been downloaded');
         
         if (result.success || alreadyDownloaded) {
@@ -106,7 +117,6 @@ const VideoDownloader = {
     const downloadedList = [];
     let videosToProcess = videoList;
 
-    // Si la lista de entrada está vacía, lee la lista guardada de la FASE 1
     if (videosToProcess.length === 0) {
         try {
             const data = await fs.readFile(path.join(process.cwd(), 'data', 'video_list.json'), 'utf-8');
@@ -117,7 +127,6 @@ const VideoDownloader = {
         }
     }
 
-
     for (let i = 0; i < videosToProcess.length; i++) {
         const video = videosToProcess[i];
         const outputFilename = `${video.id}.%(ext)s`;
@@ -127,17 +136,17 @@ const VideoDownloader = {
         
         // --- 1. PRE-CHECK DE DURACIÓN ---
         const duration = await getVideoDuration(video.url);
-
-        if (duration > 59) {
-            console.log(`⚠️ Saltando ${video.id}. Duración (${duration}s) supera el límite de 59s.`);
-            continue; // Saltar al siguiente video
-        }
         
         if (duration === Infinity) {
-            // Este caso ya fue manejado por la función getVideoDuration
+             console.log(`⚠️ Saltando ${video.id}. Falló la obtención de duración/metadatos.`);
+             continue;
+        }
+        
+        if (duration > 59) {
+            console.log(`⚠️ Saltando ${video.id}. Duración (${duration}s) supera el límite de 59s.`);
             continue; 
         }
-
+        
         console.log(`Duración OK (${duration}s). Procediendo a la descarga...`);
 
         // --- 2. DESCARGA REAL ---

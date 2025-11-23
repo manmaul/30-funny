@@ -1,8 +1,8 @@
 // main.js
 import VideoScraper from './scraper.js';
 import VideoDownloader from './downloader.js';
-import VideoCurator from './curator.js'; // <<-- NUEVA IMPORTACIÓN
-// import VideoPublisher from './publisher.js'; // <-- Lo implementaremos después
+import VideoCurator from './curator.js'; 
+import VideoPublisher from './publisher.js'; // Importación de la FASE 4
 
 async function main() {
     console.log('--- FASE 1: OBTENCIÓN DE METADATOS ---');
@@ -23,21 +23,26 @@ async function main() {
         return;
     }
     
-    // --- NUEVA FASE 3 ---
     console.log('\n--- FASE 3: CURACIÓN CON WATERMARK ---');
     let curatedVideos = [];
     try {
-        curatedVideos = await VideoCurator.run(downloadedVideos);
+        // VideoCurator.run() lee la lista de descargados de disco.
+        curatedVideos = await VideoCurator.run(); 
     } catch (e) {
         console.error('💀 Error fatal en la FASE 3:', e.message);
         return;
     }
 
-    // --- FASE 4 (Pendiente de implementación) ---
+    // --- FASE 4: PUBLICACIÓN EN REDES ---
     console.log('\n--- FASE 4: PUBLICACIÓN EN REDES ---');
     if (curatedVideos.length > 0) {
-        // await VideoPublisher.run(curatedVideos); // Descomentar al implementar publisher.js
-        console.log('Publicador no implementado, FASE 4 omitida.');
+        let publicationReport = [];
+        try {
+            // VideoPublisher.run publica los videos curados
+            publicationReport = await VideoPublisher.run(curatedVideos); 
+        } catch (e) {
+            console.error('💀 Error fatal en la FASE 4:', e.message);
+        }
     } else {
         console.log('No hay videos curados para publicar.');
     }

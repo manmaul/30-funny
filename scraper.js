@@ -1,53 +1,41 @@
+// scraper.js
 import fs from 'fs/promises';
 import path from 'path';
 
-const OUTPUT_FILE = path.join(process.cwd(), 'data', 'video_list.json');
+const OUTPUT_LIST_FILE = path.join(process.cwd(), 'data', 'video_list.json');
 
-// --- CONSTANTES DE PRUEBA ---
-// Usamos un URL directo de un archivo MP4 estable (Big Buck Bunny) para evitar que YouTube lo bloquee.
-const STABLE_MP4_URL = 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
-const TIKTOK_COUNT = 25;
-const REEL_COUNT = 5;
-
-/**
- * Genera una lista de videos de prueba.
- */
-function generateSampleVideos(count, plataforma, isReel = false, offset = 0) {
-    const videos = [];
-
-    for (let i = 0; i < count; i++) {
-        videos.push({
-            id: `${plataforma}-${i + offset}`,
-            url: STABLE_MP4_URL, // Usamos el URL estable para todos los videos
-            plataforma: plataforma,
-            isReel: isReel,
-            channel: 'Stable Video Test',
-            description: `Video de prueba ${i + 1 + offset} para la plataforma ${plataforma}.`
-        });
-    }
-
-    return videos;
-}
-
+// Usamos URLs estables y genéricas para la simulación.
+const SAMPLE_URL = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
 
 const VideoScraper = {
-    // FUNCIÓN 'RUN'
     async run() {
         console.log('Buscando 25 TikToks y 5 Reels...');
 
-        // 1. Generar lista de TikToks (25 videos)
-        const tiktokVideos = generateSampleVideos(TIKTOK_COUNT, 'tiktok');
+        const videoList = [];
 
-        // 2. Generar lista de Reels (5 videos)
-        const reelVideos = generateSampleVideos(REEL_COUNT, 'instagram', true, TIKTOK_COUNT);
+        // Generar 25 videos simulados para TikTok
+        for (let i = 0; i < 25; i++) {
+            videoList.push({
+                id: `tiktok-${i}`,
+                url: SAMPLE_URL,
+                platform: 'TikTok',
+                title: `Momento divertido TikTok #${i}`
+            });
+        }
 
-        // 3. Combinar las listas
-        const videoList = [...tiktokVideos, ...reelVideos];
+        // Generar 5 videos simulados para Instagram Reels
+        for (let i = 25; i < 30; i++) {
+            videoList.push({
+                id: `instagram-${i}`,
+                url: SAMPLE_URL,
+                platform: 'Instagram Reels',
+                title: `Reel viral Instagram #${i}`
+            });
+        }
 
-        // 4. Guardar los metadatos
-        await fs.writeFile(OUTPUT_FILE, JSON.stringify(videoList, null, 2));
-
-        console.log(`✅ Metadatos de ${videoList.length} videos guardados en ${OUTPUT_FILE}`);
+        await fs.writeFile(OUTPUT_LIST_FILE, JSON.stringify(videoList, null, 2));
+        console.log(`✅ Metadatos de ${videoList.length} videos guardados en ${OUTPUT_LIST_FILE}`);
+        
         return videoList;
     }
 };

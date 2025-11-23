@@ -1,33 +1,43 @@
 import express from "express";
 import cors from "cors";
-import fetch from "node-fetch";
 import TikTokScraper from "./scraper.js";
 
 const app = express();
 app.use(cors());
 
+// Timeout global para evitar cuelgues (60s)
+app.use((req, res, next) => {
+  res.setTimeout(60000, () => {
+    console.error("⏳ Timeout de petición:", req.originalUrl);
+    return res.status(504).json({ ok: false, error: "Timeout del servidor" });
+  });
+  next();
+});
+
+// Logger simple
+app.use((req, res, next) => {
+  console.log(`🟢 ${req.method} ${req.originalUrl}`);
+  next();
+});
+
+// Root
 app.get("/", (req, res) => {
   res.send("Servidor activo: 30-funny");
 });
 
-app.get("/scrape/tiktok", async (req, res) => {
+// --- Helper para manejar errores uniformemente ---
+function safeError(err) {
+  if (!err) return "Error desconocido";
+
+  if (typeof err === "string") return err;
+
+  if (err.message) return err.message;
+
   try {
-    const data = await TikTokScraper.scrapeTikTok();
-    res.json({ ok: true, videos: data });
-  } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
+    return JSON.stringify(err).slice(0, 300);
+  } catch {
+    return "Error inesperado";
   }
-});
+}
 
-app.get("/scrape/youtube", async (req, res) => {
-  try {
-    const data = await TikTokScraper.scrapeYouTube();
-    res.json({ ok: true, videos: data });
-  } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log("Servidor operativo en puerto", PORT));
-
+//

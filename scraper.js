@@ -6,7 +6,7 @@ import puppeteer from 'puppeteer';
 const OUTPUT_LIST_FILE = path.join(process.cwd(), 'data', 'video_list.json');
 
 // --- CONFIGURACIÓN DE BÚSQUEDA ---
-// Lista de hashtags proporcionada por el usuario
+// Lista de hashtags para la búsqueda de contenido viral
 const HASHTAGS = [
     'humor', 'humorvideos', 'viral', 'virales', 'funnyvideos', 
     'funny', 'lol', 'lolvideos', 'memes', 'gracioso', 
@@ -14,10 +14,10 @@ const HASHTAGS = [
     'parati', 'viralvideos', 'viralreels', 'viralpost', 
     'viralvideo'
 ];
-const TIKTOK_COUNT = 25; // <--- CORREGIDO: 25 videos
-const REELS_COUNT = 5;  // 5 videos
+const TIKTOK_COUNT = 25; // Cantidad de videos de TikTok
+const REELS_COUNT = 5;  // Cantidad de videos de Instagram Reels (simulados)
 
-// URL de prueba para el fallback (si el scraping falla)
+// URL de prueba para el fallback (si el scraping falla o para Reels)
 const SAMPLE_URL = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
 
 const VideoScraper = {
@@ -26,7 +26,7 @@ const VideoScraper = {
 
         let videoList = [];
         
-        // --- PROCESAMIENTO DE TIKTOK (BETA con Puppeteer) ---
+        // --- PROCESAMIENTO DE TIKTOK (BETA con Puppeteer y Timeout 45s) ---
         console.log(`\n> Iniciando scraping en TikTok (buscando los más populares de los ${HASHTAGS.length} hashtags)...`);
         try {
             const tiktokVideos = await this.scrapeTikTok();
@@ -38,6 +38,7 @@ const VideoScraper = {
         }
 
         // --- PROCESAMIENTO DE INSTAGRAM REELS (SIMULADO) ---
+        // Se mantiene la simulación debido a la complejidad y estabilidad de Instagram.
         console.log(`\n> Simulando scraping en Instagram Reels (usando URLs de prueba)...`);
         videoList.push(...this.generateSampleVideos('instagram', REELS_COUNT, videoList.length));
 
@@ -52,24 +53,24 @@ const VideoScraper = {
 
     // --- LÓGICA DE SCRAPING DE TIKTOK (Implementación de prueba de Puppeteer) ---
     async scrapeTikTok() {
-        // Seleccionamos un hashtag aleatorio de la lista para simular la búsqueda rotativa.
+        // Seleccionamos un hashtag aleatorio para simular la búsqueda rotativa.
         const randomHashtag = HASHTAGS[Math.floor(Math.random() * HASHTAGS.length)];
         const url = `https://www.tiktok.com/tag/${randomHashtag}`;
 
-        // Usamos { headless: true } para un rendimiento rápido en la automatización
         const browser = await puppeteer.launch({ headless: true }); 
         const page = await browser.newPage();
-        await page.goto(url, { waitUntil: 'networkidle2' });
+        
+        // Aumentar el timeout de la navegación a 45 segundos para dar tiempo a la carga
+        await page.goto(url, { waitUntil: 'networkidle2', timeout: 45000 }); 
 
-        // Esperar el selector de videos más virales (generalmente en la parte superior)
-        await page.waitForSelector('div[data-e2e="challenge-item"]', { timeout: 15000 });
+        // Esperar el selector de videos con un timeout de 45 segundos
+        await page.waitForSelector('div[data-e2e="challenge-item"]', { timeout: 45000 });
 
         const videos = await page.evaluate((count) => {
             const results = [];
-            // Selecciona los videos en la primera sección ("más virales")
             const videoElements = document.querySelectorAll('div[data-e2e="challenge-item"]');
             
-            // Buscamos el doble del necesario para tener margen y poder seleccionar los "más virales"
+            // Buscamos más del necesario para tener margen
             for (let i = 0; i < Math.min(count * 2, videoElements.length); i++) {
                 const element = videoElements[i];
                 const link = element.querySelector('a')?.href;
@@ -79,10 +80,10 @@ const VideoScraper = {
                     
                     results.push({
                         id: videoId,
-                        url: link, // URL de la página del video (yt-dlp extrae el mp4)
+                        url: link, 
                         platform: 'TikTok',
                         title: `TikTok #${videoId} (${randomHashtag})`,
-                        virality_score: i // Posición como proxy de la virilidad
+                        virality_score: i 
                     });
                 }
             }
